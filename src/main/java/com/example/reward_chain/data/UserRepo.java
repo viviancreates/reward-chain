@@ -1,9 +1,5 @@
 package com.example.reward_chain.data;
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 2988e1b (Created new branch and added user repo)
 import com.example.reward_chain.data.exceptions.InternalErrorException;
 import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.model.User;
