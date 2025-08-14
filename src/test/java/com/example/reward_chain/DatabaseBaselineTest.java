@@ -1,4 +1,3 @@
-// src/test/java/com/example/reward_chain/DatabaseBaselineTest.java
 package com.example.reward_chain;
 
 import org.junit.jupiter.api.DisplayName;
@@ -15,23 +14,46 @@ class DatabaseBaselineTest extends BaseDbTest {
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("seed present: counts + first/last name separately")
-    void counts_and_firstLastName() {
-        // baseline counts from reset_db()
-        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM `User`", Integer.class));
-        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM `Category`", Integer.class));
-        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM `Transaction`", Integer.class));
-        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM `Rewards`", Integer.class));
+    @DisplayName("baseline: table counts match seed")
+    void counts_match_seed() {
+        int expectedUsers = 8;
+        int actualUsers = jdbc.queryForObject("SELECT COUNT(*) FROM `User`", Integer.class);
+        assertEquals(expectedUsers, actualUsers, "User count: expected=" + expectedUsers + ", actual=" + actualUsers);
 
-        // verify we’re on the expected schema
-        String db = jdbc.queryForObject("SELECT DATABASE()", String.class);
-        assertNotNull(db);
+        int expectedCategories = 6;
+        int actualCategories = jdbc.queryForObject("SELECT COUNT(*) FROM `Category`", Integer.class);
+        assertEquals(expectedCategories, actualCategories, "Category count: expected=" + expectedCategories + ", actual=" + actualCategories);
 
-        // fetch first and last name separately (no concat)
-        Map<String, Object> row = jdbc.queryForMap(
-                "SELECT `FirstName`, `LastName` FROM `User` ORDER BY `UserID` LIMIT 1"
+        int expectedWallets = 8;
+        int actualWallets = jdbc.queryForObject("SELECT COUNT(*) FROM `Wallet`", Integer.class);
+        assertEquals(expectedWallets, actualWallets, "Wallet count: expected=" + expectedWallets + ", actual=" + actualWallets);
+
+        int expectedAlloc = 8;
+        int actualAlloc = jdbc.queryForObject("SELECT COUNT(*) FROM `Allocations`", Integer.class);
+        assertEquals(expectedAlloc, actualAlloc, "Allocations count: expected=" + expectedAlloc + ", actual=" + actualAlloc);
+
+        int expectedTx = 18;
+        int actualTx = jdbc.queryForObject("SELECT COUNT(*) FROM `Transaction`", Integer.class);
+        assertEquals(expectedTx, actualTx, "Transaction count: expected=" + expectedTx + ", actual=" + actualTx);
+
+        int expectedRewards = 18;
+        int actualRewards = jdbc.queryForObject("SELECT COUNT(*) FROM `Rewards`", Integer.class);
+        assertEquals(expectedRewards, actualRewards, "Rewards count: expected=" + expectedRewards + ", actual=" + actualRewards);
+    }
+
+    @Test
+    @DisplayName("baseline: first user is Alice Admin (ordered by UserID)")
+    void first_user_is_alice() {
+        Map<String,Object> row = jdbc.queryForMap(
+                "SELECT `FirstName`,`LastName` FROM `User` ORDER BY `UserID` LIMIT 1"
         );
-        assertEquals("Alice", row.get("FirstName"));
-        assertEquals("Admin", row.get("LastName"));
+        String expectedFirst = "Alice";
+        String actualFirst = (String) row.get("FirstName");
+        assertEquals(expectedFirst, actualFirst, "FirstName: expected=" + expectedFirst + ", actual=" + actualFirst);
+
+        String expectedLast = "Admin";
+        String actualLast = (String) row.get("LastName");
+        assertEquals(expectedLast, actualLast, "LastName: expected=" + expectedLast + ", actual=" + actualLast);
     }
 }
+
