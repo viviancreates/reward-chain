@@ -14,7 +14,7 @@ public class Rewards {
     private BigDecimal coinPriceUsd;
     private String walletAddress;
     private String transactionHash;
-    private String status;
+    private RewardsStatus status;
     private LocalDateTime createdDate;
 
     public Rewards() {}
@@ -30,7 +30,7 @@ public class Rewards {
         this.rewardAmountCrypto = rewardAmountCrypto;
         this.coinPriceUsd = coinPriceUsd;
         this.walletAddress = walletAddress;
-        this.status = "PENDING";
+        this.status = RewardsStatus.PENDING;
         this.createdDate = LocalDateTime.now();
     }
 
@@ -114,11 +114,11 @@ public class Rewards {
         this.transactionHash = transactionHash;
     }
 
-    public String getStatus() {
+    public RewardsStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(RewardsStatus status) {
         this.status = status;
     }
 
