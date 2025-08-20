@@ -1,10 +1,14 @@
 package com.example.reward_chain.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class User {
     private int userId;
     private String firstName;
     private String lastName;
     private String email;
+
+    @JsonIgnore
     private String password;
 
     public User() {}
