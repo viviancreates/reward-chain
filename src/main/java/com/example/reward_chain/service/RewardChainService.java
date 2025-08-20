@@ -8,6 +8,9 @@ import com.example.reward_chain.model.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.reward_chain.data.exceptions.RecordNotFoundException;
+import com.example.reward_chain.model.Rewards;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -25,6 +28,10 @@ public class RewardChainService {
 
     // For now keep pricing simple like Bistro taxes; swap to a CoinPriceService later
     private static final BigDecimal ETH_USD = new BigDecimal("4000.00");
+
+    public Rewards getRewardById(int rewardId) throws InternalErrorException, RecordNotFoundException {
+        return rewardsRepo.getRewardById(rewardId);
+    }
 
     public RewardChainService(UserRepo userRepo,
                               WalletRepo walletRepo,
