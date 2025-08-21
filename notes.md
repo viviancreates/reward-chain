@@ -96,3 +96,21 @@ In short:
 - Mapper -> turns SQL rows into objects
 - Service Interface -> defines higher-level operations that use repos and other services
 
+
+---
+TO DO
+- kept password from showing up, but saves to database, learn how to hash
+- refactor controllers with dto if time
+- for now adding minimal crud to controllers, add deletes and updates later or when necessary for time
+- add more graceful error messages for the controller -> choose a layer? learn about that or is it int he controller?
+
+
+
+---
+
+### RUN in Mock Mode (no DB)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=mock
+
+### RUN real impl
+./mvnw spring-boot:run
+curl -s http://localhost:8080/actuator/beans | grep -i repomock || echo "No mocks found ✅"

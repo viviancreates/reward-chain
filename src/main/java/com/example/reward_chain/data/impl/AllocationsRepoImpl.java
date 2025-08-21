@@ -5,6 +5,7 @@ import com.example.reward_chain.data.exceptions.InternalErrorException;
 import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.data.mappers.AllocationsMapper;
 import com.example.reward_chain.model.Allocations;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -17,6 +18,7 @@ import java.sql.Statement;
 import java.util.List;
 
 @Repository
+@Profile("!mock")
 public class AllocationsRepoImpl implements AllocationsRepo {
     private final JdbcTemplate jdbc;
     private final AllocationsMapper mapper;

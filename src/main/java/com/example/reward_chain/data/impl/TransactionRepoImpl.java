@@ -5,6 +5,7 @@ import com.example.reward_chain.data.exceptions.InternalErrorException;
 import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.data.mappers.TransactionMapper;
 import com.example.reward_chain.model.Transaction;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -18,6 +19,7 @@ import java.sql.Timestamp;
 import java.util.List;
 
 @Repository
+@Profile("!mock")
 public class TransactionRepoImpl implements TransactionRepo {
     private final JdbcTemplate jdbc;
     private final TransactionMapper mapper;

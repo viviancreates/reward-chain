@@ -6,6 +6,7 @@ import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.data.mappers.RewardsMapper;
 import com.example.reward_chain.model.Rewards;
 import com.example.reward_chain.model.RewardsStatus;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -19,6 +20,7 @@ import java.sql.Timestamp;
 import java.util.List;
 
 @Repository
+@Profile("!mock")
 public class RewardsRepoImpl implements RewardsRepo {
     private final JdbcTemplate jdbc;
     private final RewardsMapper mapper;
