@@ -5,6 +5,7 @@ import com.example.reward_chain.data.exceptions.InternalErrorException;
 import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.model.*;
 
+import com.example.reward_chain.service.wallet.WalletService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class RewardChainService {
     private final CategoryRepo categoryRepo;
     private final TransactionRepo transactionRepo;
     private final RewardsRepo rewardsRepo;
+    private final WalletService walletService;
 
     // For now keep pricing simple like Bistro taxes; swap to a CoinPriceService later
     private static final BigDecimal ETH_USD = new BigDecimal("4000.00");
@@ -38,13 +40,15 @@ public class RewardChainService {
                               AllocationsRepo allocationsRepo,
                               CategoryRepo categoryRepo,
                               TransactionRepo transactionRepo,
-                              RewardsRepo rewardsRepo) {
+                              RewardsRepo rewardsRepo,
+                              WalletService walletService) {
         this.userRepo = userRepo;
         this.walletRepo = walletRepo;
         this.allocationsRepo = allocationsRepo;
         this.categoryRepo = categoryRepo;
         this.transactionRepo = transactionRepo;
         this.rewardsRepo = rewardsRepo;
+        this.walletService = walletService;
     }
 
     // -------- Read helpers (similar to BistroService’s “get*” methods) --------
@@ -76,14 +80,28 @@ public class RewardChainService {
                                                     BigDecimal ethPercent,
                                                     BigDecimal usdcPercent)
             throws InternalErrorException {
+
         BigDecimal sum = ethPercent.add(usdcPercent);
         if (sum.compareTo(new BigDecimal("1.00")) != 0) {
-            throw new InternalErrorException(new IllegalArgumentException("Allocations must sum to 1.00"));
+            throw new InternalErrorException(
+                    new IllegalArgumentException("Allocations must sum to 1.00"));
         }
 
         User saved = userRepo.addUser(user);
-        walletRepo.addWallet(new Wallet(saved.getUserId(), walletAddress, network));
+
+        String finalNetwork = (network == null || network.isBlank()) ? "ETH_MAINNET" : network;
+        String finalAddress;
+        try {
+            finalAddress = (walletAddress == null || walletAddress.isBlank())
+                    ? walletService.createWallet(finalNetwork)  // may throw
+                    : walletAddress;
+        } catch (Exception e) {
+            // keep your service contract (InternalErrorException)
+            throw new InternalErrorException(e);
+        }
+        walletRepo.addWallet(new Wallet(saved.getUserId(), finalAddress, finalNetwork));
         allocationsRepo.addAllocation(new Allocations(saved.getUserId(), ethPercent, usdcPercent));
+
         return saved;
     }
 
