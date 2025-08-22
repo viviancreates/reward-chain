@@ -2,22 +2,22 @@ package com.example.reward_chain.model;
 
 import java.math.BigDecimal;
 
-public class UserCategoryAllocation {
-    private int allocationId;
-    private int userId;
-    private int categoryId;
-    private BigDecimal percent; // 0.00–1.00
+public class UserCategoryRule {
+    private int ruleId;         // DB PK
+    private int userId;         // FK -> User(UserID)
+    private int categoryId;     // FK -> Category(CategoryID)
+    private BigDecimal percent; // 0..100
 
-    public UserCategoryAllocation() {}
+    public UserCategoryRule() {}
 
-    public UserCategoryAllocation(int userId, int categoryId, BigDecimal percent) {
+    public UserCategoryRule(int userId, int categoryId, BigDecimal percent) {
         this.userId = userId;
         this.categoryId = categoryId;
         this.percent = percent;
     }
 
-    public int getAllocationId() { return allocationId; }
-    public void setAllocationId(int allocationId) { this.allocationId = allocationId; }
+    public int getRuleId() { return ruleId; }
+    public void setRuleId(int ruleId) { this.ruleId = ruleId; }
 
     public int getUserId() { return userId; }
     public void setUserId(int userId) { this.userId = userId; }
@@ -30,8 +30,8 @@ public class UserCategoryAllocation {
 
     @Override
     public String toString() {
-        return "UserCategoryAllocation{" +
-                "allocationId=" + allocationId +
+        return "UserCategoryRule{" +
+                "ruleId=" + ruleId +
                 ", userId=" + userId +
                 ", categoryId=" + categoryId +
                 ", percent=" + percent +
