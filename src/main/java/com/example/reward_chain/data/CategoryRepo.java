@@ -21,5 +21,5 @@ public interface CategoryRepo {
     void updateCategory(Category category) throws InternalErrorException;
 
     // Delete a category by ID - returns the deleted category
-    Category deleteCategory(int id) throws InternalErrorException;
+    void deleteCategory(int id) throws InternalErrorException;
 }

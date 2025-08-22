@@ -48,5 +48,7 @@ public class CategoryRepoMock implements CategoryRepo {
     public void updateCategory(Category category) { categories.put(category.getCategoryId(), category); }
 
     @Override
-    public Category deleteCategory(int id) { return categories.remove(id); }
+    public void deleteCategory(int id) {
+        categories.remove(id);
+    }
 }

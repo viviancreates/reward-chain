@@ -9,7 +9,6 @@ import com.example.reward_chain.service.wallet.WalletService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.model.Rewards;
 
 import java.math.BigDecimal;
@@ -27,13 +26,10 @@ public class RewardChainService {
     private final TransactionRepo transactionRepo;
     private final RewardsRepo rewardsRepo;
     private final WalletService walletService;
+    private final UserCategoryRuleRepo userCategoryRuleRepo;
 
     // For now keep pricing simple like Bistro taxes; swap to a CoinPriceService later
     private static final BigDecimal ETH_USD = new BigDecimal("4000.00");
-
-    public Rewards getRewardById(int rewardId) throws InternalErrorException, RecordNotFoundException {
-        return rewardsRepo.getRewardById(rewardId);
-    }
 
     public RewardChainService(UserRepo userRepo,
                               WalletRepo walletRepo,
@@ -41,7 +37,8 @@ public class RewardChainService {
                               CategoryRepo categoryRepo,
                               TransactionRepo transactionRepo,
                               RewardsRepo rewardsRepo,
-                              WalletService walletService) {
+                              WalletService walletService,
+                              UserCategoryRuleRepo userCategoryRuleRepo) {
         this.userRepo = userRepo;
         this.walletRepo = walletRepo;
         this.allocationsRepo = allocationsRepo;
@@ -49,8 +46,64 @@ public class RewardChainService {
         this.transactionRepo = transactionRepo;
         this.rewardsRepo = rewardsRepo;
         this.walletService = walletService;
+        this.userCategoryRuleRepo = userCategoryRuleRepo;
+
     }
 
+    /** Prefer user rule (0..100) if present; otherwise category default (0..1). */
+    private BigDecimal resolveEffectivePercent(int userId, int categoryId, BigDecimal categoryFraction)
+            throws InternalErrorException {
+        try {
+            var rule = userCategoryRuleRepo.getForUserCategory(userId, categoryId);
+            return PercentageService.toFraction(rule.getPercent()); // 0..100 → 0..1
+        } catch (RecordNotFoundException e) {
+            return categoryFraction; // fallback
+        }
+    }
+
+    /** create ETH + USDC pending rewards for a transaction using user coin allocations. */
+    @Transactional
+    public List<Rewards> createPendingRewardsForTransaction(int transactionId)
+            throws InternalErrorException, RecordNotFoundException {
+
+        Transaction tx = transactionRepo.getTransactionById(transactionId);
+        Category cat = categoryRepo.getCategoryById(tx.getCategoryId());
+        Wallet w = walletRepo.getWalletByUserId(tx.getUserId());
+        Allocations a = allocationsRepo.getAllocationByUserId(tx.getUserId());
+
+        // get effective saving % as fraction
+        BigDecimal pct = resolveEffectivePercent(tx.getUserId(), tx.getCategoryId(), cat.getRewardPercentage());
+
+        // total USD to save from this tx
+        BigDecimal baseUsd = tx.getAmount().multiply(pct).setScale(4, RoundingMode.HALF_UP);
+
+        // split by allocations (assumed fractions 0..1)
+        BigDecimal ethUsd  = baseUsd.multiply(a.getEthPercent()).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal usdcUsd = baseUsd.multiply(a.getUsdcPercent()).setScale(4, RoundingMode.HALF_UP);
+
+        BigDecimal ethCrypto  = ethUsd.divide(ETH_USD, 8, RoundingMode.HALF_UP);
+        BigDecimal usdcCrypto = usdcUsd; // 1 USDC ≈ $1 for now
+
+        Rewards eth = new Rewards(
+                tx.getTransactionId(), tx.getUserId(), "ETH",
+                pct, ethUsd, ethCrypto, ETH_USD, w.getWalletAddress());
+        eth.setStatus(RewardsStatus.PENDING);
+        eth.setCreatedDate(LocalDateTime.now());
+
+        Rewards usdc = new Rewards(
+                tx.getTransactionId(), tx.getUserId(), "USDC",
+                pct, usdcUsd, usdcCrypto, BigDecimal.ONE, w.getWalletAddress());
+        usdc.setStatus(RewardsStatus.PENDING);
+        usdc.setCreatedDate(LocalDateTime.now());
+
+        eth = rewardsRepo.addReward(eth);
+        usdc = rewardsRepo.addReward(usdc);
+        return List.of(eth, usdc);
+    }
+
+    public Rewards getRewardById(int rewardId) throws InternalErrorException, RecordNotFoundException {
+        return rewardsRepo.getRewardById(rewardId);
+    }
     // -------- Read helpers (similar to BistroService’s “get*” methods) --------
 
     @Transactional(readOnly = true)
