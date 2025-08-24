@@ -119,9 +119,19 @@ public class RewardChainService {
         return transactionRepo.getTransactionsByUserId(userId);
     }
 
+    @Transactional(readOnly = true)
     public List<Rewards> getUserRewards(int userId) throws InternalErrorException {
-        return rewardsRepo.getRewardsByUserId(userId);
+        List<Rewards> list = rewardsRepo.getRewardsByUserId(userId);
+        // Prefer createdDate desc, fallback to rewardId desc
+        list.sort((a, b) -> {
+            if (a.getCreatedDate() != null && b.getCreatedDate() != null) {
+                return b.getCreatedDate().compareTo(a.getCreatedDate());
+            }
+            return Integer.compare(b.getRewardId(), a.getRewardId());
+        });
+        return list;
     }
+
 
     // -------- Business flows (the important part) --------
 
@@ -237,5 +247,10 @@ public class RewardChainService {
         rewardsRepo.updateReward(r);
 
         return rewardsRepo.getRewardById(r.getRewardId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Rewards> getRewardsByTransactionId(int txId) throws InternalErrorException {
+        return rewardsRepo.getRewardsByTransactionId(txId);
     }
 }
