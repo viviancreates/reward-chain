@@ -99,7 +99,7 @@ public class CategoryRepoImpl implements CategoryRepo {
 
     @Transactional
     @Override
-    public Category deleteCategory(int id) throws InternalErrorException {
+    public void deleteCategory(int id) throws InternalErrorException {
         String select = """
             SELECT `CategoryID`, `CategoryName`, `RewardPercentage`
             FROM `Category` WHERE `CategoryID` = ?
@@ -109,7 +109,6 @@ public class CategoryRepoImpl implements CategoryRepo {
             Category before = jdbc.queryForObject(select, mapper, id);
             int rows = jdbc.update(delete, id);
             if (rows == 0) throw new InternalErrorException(new Exception("Delete failed."));
-            return before;
         } catch (EmptyResultDataAccessException e) {
             throw new InternalErrorException(new Exception("Category not found."));
         } catch (Exception e) {

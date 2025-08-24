@@ -32,4 +32,5 @@ public interface RewardsRepo {
 
     // Delete a reward by ID - returns the deleted reward
     Rewards deleteReward(int id) throws InternalErrorException;
+
 }

@@ -27,6 +27,7 @@ public class TransactionController {
         BigDecimal amount = new BigDecimal(body.get("amount").toString());
 
         Transaction tx = service.addManual(userId, categoryId, merchant, amount);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(tx);
     }
 

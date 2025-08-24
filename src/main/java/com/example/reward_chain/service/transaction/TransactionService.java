@@ -17,4 +17,5 @@ public interface TransactionService {
             throws InternalErrorException, RecordNotFoundException;
 
     List<Transaction> listByUser(int userId) throws InternalErrorException;
+
 }

@@ -2,6 +2,7 @@ package com.example.reward_chain.controller;
 
 import com.example.reward_chain.data.exceptions.InternalErrorException;
 import com.example.reward_chain.data.exceptions.RecordNotFoundException;
+import com.example.reward_chain.dto.CreatePendingRewardRequest;
 import com.example.reward_chain.model.Rewards;
 import com.example.reward_chain.service.RewardChainService;
 import org.springframework.http.ResponseEntity;
@@ -19,11 +20,10 @@ public class RewardsController {
     }
 
     @PostMapping("/pending")
-    public ResponseEntity<Rewards> createPending(@RequestBody java.util.Map<String,Object> body)
+    public ResponseEntity<Rewards> createPending(@RequestBody CreatePendingRewardRequest req)
             throws InternalErrorException, RecordNotFoundException {
-        int txId = Integer.parseInt(body.get("transactionId").toString());
-        String coinType = body.get("coinType").toString();
-        return ResponseEntity.status(201).body(service.createPendingRewardForTransaction(txId, coinType));
+        return ResponseEntity.status(201)
+                .body(service.createPendingRewardForTransaction(req.transactionId(), req.coinType()));
     }
 
     @PostMapping("/{rewardId}/complete")
@@ -46,4 +46,12 @@ public class RewardsController {
             throws InternalErrorException {
         return ResponseEntity.ok(service.getUserRewards(userId));
     }
+
+    // controller
+    @GetMapping("/tx/{transactionId}")
+    public ResponseEntity<List<Rewards>> byTx(@PathVariable int transactionId)
+            throws InternalErrorException {
+        return ResponseEntity.ok(service.getRewardsByTransactionId(transactionId));
+    }
+
 }
