@@ -8,6 +8,7 @@ import com.example.reward_chain.model.*;
 import com.example.reward_chain.service.wallet.WalletService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.reward_chain.service.MnemonicGeneratorService;
 
 import com.example.reward_chain.model.Rewards;
 
@@ -27,6 +28,7 @@ public class RewardChainService {
     private final RewardsRepo rewardsRepo;
     private final WalletService walletService;
     private final UserCategoryRuleRepo userCategoryRuleRepo;
+    private final MnemonicGeneratorService mnemonicGenerator;
 
     // For now keep pricing simple like Bistro taxes; swap to a CoinPriceService later
     private static final BigDecimal ETH_USD = new BigDecimal("4000.00");
@@ -38,7 +40,8 @@ public class RewardChainService {
                               TransactionRepo transactionRepo,
                               RewardsRepo rewardsRepo,
                               WalletService walletService,
-                              UserCategoryRuleRepo userCategoryRuleRepo) {
+                              UserCategoryRuleRepo userCategoryRuleRepo,
+                              MnemonicGeneratorService mnemonicGenerator) {
         this.userRepo = userRepo;
         this.walletRepo = walletRepo;
         this.allocationsRepo = allocationsRepo;
@@ -47,6 +50,7 @@ public class RewardChainService {
         this.rewardsRepo = rewardsRepo;
         this.walletService = walletService;
         this.userCategoryRuleRepo = userCategoryRuleRepo;
+        this.mnemonicGenerator = mnemonicGenerator;
 
     }
 
