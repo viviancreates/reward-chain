@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 
 @Service
-@Profile({"default","mock"}) // only active in dev/mock profiles
+@Profile({"default","mock","prod"}) // only active in dev/mock profiles
 public class MnemonicGeneratorService {
 
     private static final SecureRandom RNG = new SecureRandom();
