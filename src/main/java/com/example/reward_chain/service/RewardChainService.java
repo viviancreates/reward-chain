@@ -9,6 +9,8 @@ import com.example.reward_chain.service.wallet.WalletService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.reward_chain.service.MnemonicGeneratorService;
+import com.example.reward_chain.service.pricing.CoinPriceService;
+
 
 import com.example.reward_chain.model.Rewards;
 
@@ -29,9 +31,8 @@ public class RewardChainService {
     private final WalletService walletService;
     private final UserCategoryRuleRepo userCategoryRuleRepo;
     private final MnemonicGeneratorService mnemonicGenerator;
+    private final CoinPriceService priceService;
 
-    // For now keep pricing simple like Bistro taxes; swap to a CoinPriceService later
-    private static final BigDecimal ETH_USD = new BigDecimal("4000.00");
 
     public RewardChainService(UserRepo userRepo,
                               WalletRepo walletRepo,
@@ -41,7 +42,8 @@ public class RewardChainService {
                               RewardsRepo rewardsRepo,
                               WalletService walletService,
                               UserCategoryRuleRepo userCategoryRuleRepo,
-                              MnemonicGeneratorService mnemonicGenerator) {
+                              MnemonicGeneratorService mnemonicGenerator,
+                              CoinPriceService priceService ) {
         this.userRepo = userRepo;
         this.walletRepo = walletRepo;
         this.allocationsRepo = allocationsRepo;
@@ -51,7 +53,12 @@ public class RewardChainService {
         this.walletService = walletService;
         this.userCategoryRuleRepo = userCategoryRuleRepo;
         this.mnemonicGenerator = mnemonicGenerator;
+        this.priceService = priceService;
 
+    }
+
+    private static BigDecimal safe(BigDecimal v, String def) {
+        return v != null ? v : new BigDecimal(def);
     }
 
     /** Prefer user rule (0..100) if present; otherwise category default (0..1). */
@@ -75,34 +82,39 @@ public class RewardChainService {
         Wallet w = walletRepo.getWalletByUserId(tx.getUserId());
         Allocations a = allocationsRepo.getAllocationByUserId(tx.getUserId());
 
-        // get effective saving % as fraction
+        // ...
         BigDecimal pct = resolveEffectivePercent(tx.getUserId(), tx.getCategoryId(), cat.getRewardPercentage());
 
-        // total USD to save from this tx
         BigDecimal baseUsd = tx.getAmount().multiply(pct).setScale(4, RoundingMode.HALF_UP);
 
-        // split by allocations (assumed fractions 0..1)
+// allocations
         BigDecimal ethUsd  = baseUsd.multiply(a.getEthPercent()).setScale(4, RoundingMode.HALF_UP);
         BigDecimal usdcUsd = baseUsd.multiply(a.getUsdcPercent()).setScale(4, RoundingMode.HALF_UP);
 
-        BigDecimal ethCrypto  = ethUsd.divide(ETH_USD, 8, RoundingMode.HALF_UP);
-        BigDecimal usdcCrypto = usdcUsd; // 1 USDC ≈ $1 for now
+// live prices (fallbacks preserved)
+        BigDecimal ethUsdPrice  = safe(priceService.getUsd("ETH"),  "4000.00");
+        BigDecimal usdcUsdPrice = safe(priceService.getUsd("USDC"), "1.00");
 
+        BigDecimal ethCrypto  = ethUsd.divide(ethUsdPrice, 8, RoundingMode.HALF_UP);
+        BigDecimal usdcCrypto = usdcUsd.divide(usdcUsdPrice, 8, RoundingMode.HALF_UP);
+
+// build rewards (store price used)
         Rewards eth = new Rewards(
                 tx.getTransactionId(), tx.getUserId(), "ETH",
-                pct, ethUsd, ethCrypto, ETH_USD, w.getWalletAddress());
+                pct, ethUsd, ethCrypto, ethUsdPrice, w.getWalletAddress());
         eth.setStatus(RewardsStatus.PENDING);
         eth.setCreatedDate(LocalDateTime.now());
 
         Rewards usdc = new Rewards(
                 tx.getTransactionId(), tx.getUserId(), "USDC",
-                pct, usdcUsd, usdcCrypto, BigDecimal.ONE, w.getWalletAddress());
+                pct, usdcUsd, usdcCrypto, usdcUsdPrice, w.getWalletAddress());
         usdc.setStatus(RewardsStatus.PENDING);
         usdc.setCreatedDate(LocalDateTime.now());
 
         eth = rewardsRepo.addReward(eth);
         usdc = rewardsRepo.addReward(usdc);
         return List.of(eth, usdc);
+
     }
 
     public Rewards getRewardById(int rewardId) throws InternalErrorException, RecordNotFoundException {
@@ -196,22 +208,14 @@ public class RewardChainService {
         Category cat = categoryRepo.getCategoryById(tx.getCategoryId());
         Wallet w = walletRepo.getWalletByUserId(tx.getUserId());
 
-        BigDecimal pct = cat.getRewardPercentage();                    // e.g., 0.03
-        BigDecimal usd = tx.getAmount().multiply(pct)                  // amount * %
-                .setScale(4, RoundingMode.HALF_UP);
-        BigDecimal price = ETH_USD;                                    // stubbed price
+        BigDecimal pct   = cat.getRewardPercentage();
+        BigDecimal usd   = tx.getAmount().multiply(pct).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal price = safe(priceService.getUsd(coinType), "4000.00"); // e.g., ETH fallback
         BigDecimal crypto = usd.divide(price, 8, RoundingMode.HALF_UP);
 
         Rewards r = new Rewards(
-                tx.getTransactionId(),
-                tx.getUserId(),
-                coinType,
-                pct,
-                usd,
-                crypto,
-                price,
-                w.getWalletAddress()
-        );
+                tx.getTransactionId(), tx.getUserId(), coinType,
+                pct, usd, crypto, price, w.getWalletAddress());
         r.setStatus(RewardsStatus.PENDING);
         r.setTransactionHash(null);
         r.setCreatedDate(LocalDateTime.now());
@@ -242,12 +246,13 @@ public class RewardChainService {
 
         BigDecimal pct = cat.getRewardPercentage();
         BigDecimal usd = tx.getAmount().multiply(pct).setScale(4, RoundingMode.HALF_UP);
-        BigDecimal crypto = usd.divide(ETH_USD, 8, RoundingMode.HALF_UP);
+        BigDecimal price = safe(priceService.getUsd(r.getCoinType()), "4000.00");
+        BigDecimal crypto = usd.divide(price, 8, RoundingMode.HALF_UP);
 
         r.setRewardPercentage(pct);
         r.setRewardAmountUsd(usd);
         r.setRewardAmountCrypto(crypto);
-        r.setCoinPriceUsd(ETH_USD);
+        r.setCoinPriceUsd(price);
         rewardsRepo.updateReward(r);
 
         return rewardsRepo.getRewardById(r.getRewardId());
@@ -256,5 +261,11 @@ public class RewardChainService {
     @Transactional(readOnly = true)
     public List<Rewards> getRewardsByTransactionId(int txId) throws InternalErrorException {
         return rewardsRepo.getRewardsByTransactionId(txId);
+    }
+
+    @Transactional(readOnly = true)
+    public Wallet getWalletByUserId(int userId)
+            throws InternalErrorException, RecordNotFoundException {
+        return walletRepo.getWalletByUserId(userId);
     }
 }

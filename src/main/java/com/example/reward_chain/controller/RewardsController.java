@@ -5,6 +5,7 @@ import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.dto.CreatePendingRewardRequest;
 import com.example.reward_chain.model.Rewards;
 import com.example.reward_chain.service.RewardChainService;
+import com.example.reward_chain.service.pricing.CoinPriceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,9 +15,11 @@ import java.util.List;
 @RequestMapping("/api/rewards")
 public class RewardsController {
     private final RewardChainService service;
+    private final CoinPriceService coinPriceService;
 
-    public RewardsController(RewardChainService service){
+    public RewardsController(RewardChainService service, CoinPriceService coinPriceService){
         this.service = service;
+        this.coinPriceService = coinPriceService;
     }
 
     @PostMapping("/pending")
@@ -42,9 +45,18 @@ public class RewardsController {
 
     // list rewards for a user (most recent first)
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Rewards>> getByUser(@PathVariable int userId)
-            throws InternalErrorException {
-        return ResponseEntity.ok(service.getUserRewards(userId));
+    public ResponseEntity<List<Rewards>> getByUser(
+            @PathVariable int userId,
+            @RequestParam(name = "live", defaultValue = "false") boolean live
+    ) throws InternalErrorException {
+        var list = service.getUserRewards(userId);
+        if (live) {
+            for (var r : list) {
+                var p = coinPriceService.getUsd(r.getCoinType());
+                if (p != null) r.setCoinPriceUsd(p); // override for response only
+            }
+        }
+        return ResponseEntity.ok(list);
     }
 
     // controller

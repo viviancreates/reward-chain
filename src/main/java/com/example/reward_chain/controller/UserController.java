@@ -2,6 +2,7 @@ package com.example.reward_chain.controller;
 
 import com.example.reward_chain.data.WalletRepo;
 import com.example.reward_chain.data.exceptions.InternalErrorException;
+import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.model.User;
 import com.example.reward_chain.service.MnemonicGeneratorService;
 import com.example.reward_chain.service.RewardChainService;
@@ -67,6 +68,12 @@ public class UserController {
         if (oneTimeMnemonic != null) resp.put("oneTimeMnemonic", oneTimeMnemonic);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(resp); // <-- return the map
+    }
+
+    @GetMapping("/{userId}/wallet")
+    public ResponseEntity<Wallet> getWallet(@PathVariable int userId)
+            throws InternalErrorException, RecordNotFoundException {
+        return ResponseEntity.ok(service.getWalletByUserId(userId));
     }
 
 }
