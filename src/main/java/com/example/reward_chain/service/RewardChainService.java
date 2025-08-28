@@ -5,11 +5,14 @@ import com.example.reward_chain.data.exceptions.InternalErrorException;
 import com.example.reward_chain.data.exceptions.RecordNotFoundException;
 import com.example.reward_chain.model.*;
 
+import com.example.reward_chain.service.payout.PayoutService;
 import com.example.reward_chain.service.wallet.WalletService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.reward_chain.service.MnemonicGeneratorService;
 import com.example.reward_chain.service.pricing.CoinPriceService;
+
+
 
 
 import com.example.reward_chain.model.Rewards;
@@ -32,6 +35,7 @@ public class RewardChainService {
     private final UserCategoryRuleRepo userCategoryRuleRepo;
     private final MnemonicGeneratorService mnemonicGenerator;
     private final CoinPriceService priceService;
+    private final PayoutService payoutService;
 
 
     public RewardChainService(UserRepo userRepo,
@@ -43,7 +47,8 @@ public class RewardChainService {
                               WalletService walletService,
                               UserCategoryRuleRepo userCategoryRuleRepo,
                               MnemonicGeneratorService mnemonicGenerator,
-                              CoinPriceService priceService ) {
+                              CoinPriceService priceService,
+                              PayoutService payoutService) {
         this.userRepo = userRepo;
         this.walletRepo = walletRepo;
         this.allocationsRepo = allocationsRepo;
@@ -54,6 +59,7 @@ public class RewardChainService {
         this.userCategoryRuleRepo = userCategoryRuleRepo;
         this.mnemonicGenerator = mnemonicGenerator;
         this.priceService = priceService;
+        this.payoutService = payoutService;
 
     }
 
@@ -228,11 +234,25 @@ public class RewardChainService {
     public Rewards completeReward(int rewardId)
             throws InternalErrorException, RecordNotFoundException {
         Rewards r = rewardsRepo.getRewardById(rewardId);
-        r.setStatus(RewardsStatus.COMPLETED);
-        r.setTransactionHash("0xSIM_" + rewardId); // placeholder
-        rewardsRepo.updateReward(r);
-        return rewardsRepo.getRewardById(rewardId);
+
+        try {
+            // do the actual (or simulated) payout
+            String txHash = payoutService.send(
+                    r.getCoinType(),
+                    r.getRewardAmountCrypto(),   // amount in crypto units
+                    r.getWalletAddress()         // user's wallet address
+            );
+
+            r.setStatus(RewardsStatus.COMPLETED);
+            r.setTransactionHash(txHash);
+            rewardsRepo.updateReward(r);
+
+            return rewardsRepo.getRewardById(rewardId);
+        } catch (Exception e) {
+            throw new InternalErrorException(e);
+        }
     }
+
 
     // -------- Optional utility if you ever change Category percentages --------
 
